@@ -81,6 +81,8 @@ float invertedBW = 1.0 - step(bwThreshold, luminance);
 baseColor.rgb = vec3(invertedBW);
 ```
 
+Screenshots:
+![GrayScale to Color Transition](./color-effect.gif)
 ---
 
 > Recommended modes:
