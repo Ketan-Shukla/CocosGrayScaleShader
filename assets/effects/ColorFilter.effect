@@ -1,0 +1,102 @@
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: sprite-vs:vert
+      frag: sprite-fs:frag
+      depthStencilState:
+        depthTest: false
+        depthWrite: false
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      rasterizerState:
+        cullMode: none
+      properties:
+        alphaThreshold: { value: 0.5 }
+        bwThreshold: { value: 0.5 }
+        mode: { value: 0 }
+        colorTween: { value: 0.0 }
+}%
+
+CCProgram sprite-vs %{
+  precision highp float;
+  #include <cc-global>
+  #if USE_LOCAL
+    #include <cc-local>
+  #endif
+
+  in vec3 a_position;
+  in vec2 a_texCoord;
+  in vec4 a_color;
+
+  out vec4 v_color;
+  out vec2 v_uv0;
+
+  in vec2 a_uv0;
+
+  vec4 vert () {
+    vec4 pos = vec4(a_position, 1);
+
+    #if USE_LOCAL
+      pos = cc_matWorld * pos;
+    #endif
+
+    #if USE_PIXEL_ALIGNMENT
+      pos = cc_matView * pos;
+      pos.xyz = floor(pos.xyz);
+      pos = cc_matProj * pos;
+    #else
+      pos = cc_matViewProj * pos;
+    #endif
+
+    v_uv0 = a_uv0;
+
+    v_color = a_color;
+    v_uv0 = a_texCoord;
+
+    return pos;
+  }
+}%
+
+CCProgram sprite-fs %{
+  precision highp float;
+  #include <embedded-alpha>
+  #include <alpha-test>
+
+  in vec4 v_color;
+  
+  in vec2 v_uv0;
+  #pragma builtin(local)
+  layout(set = 2, binding = 10) uniform sampler2D cc_spriteTexture;
+
+  uniform CustomUniforms {
+    float bwThreshold;
+    int mode;
+    float colorTween;
+  };
+
+  vec4 frag () {
+    vec4 texColor = CCSampleWithAlphaSeparated(cc_spriteTexture, v_uv0);
+    vec4 baseColor = v_color * texColor;
+    
+    const vec3 LUMINANCE_WEIGHTS = vec3(0.2126, 0.7152, 0.0722);    
+    float luminance = dot(baseColor.rgb, LUMINANCE_WEIGHTS); // Perceptual luminance calculation
+    
+    if (mode == 0) { // BW Mode (threshold-based)
+      float bw = step(bwThreshold, luminance);
+      baseColor.rgb = vec3(bw);
+    } else if (mode == 1) { // Grayscale Mode (traditional)
+      baseColor.rgb = vec3(luminance);
+    } else if (mode == 2) { // Color Tween Mode
+      vec3 grayscale = vec3(luminance);
+      baseColor.rgb = mix(grayscale, baseColor.rgb, colorTween);
+    }
+    
+    vec4 outputColor = baseColor;
+    ALPHA_TEST(outputColor);
+    return outputColor;
+  }
+}%
