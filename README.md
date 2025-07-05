@@ -1,6 +1,10 @@
 # CocosGrayScaleShader
 ## 🎨 Cocos Creator Three-Mode Color Filter Shader
 
+
+## Checkout my blog post to see the process and thoughts that went behind making this
+https://codeinterstellar.medium.com/creating-dynamic-filter-effect-in-cocos-creator-a-three-mode-shader-guide-e29b32fab5a9
+
 **An optimized shader for Cocos Creator 3.8.2** supporting:
 
 * Black & White (threshold-based)
